@@ -1,14 +1,13 @@
 "use client"
 
 import { ChatMessage } from "@/shared/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useHandleChat } from "@/api/handle-chat";
 import { Transaction } from '@hashgraph/sdk';
 import { ChatInput } from "@/components/chat-input";
 import { EmptyChat } from "@/components/empty-chat";
 import { Header } from "@/components/header";
-import { useAppKitProvider, useAppKitState } from "@reown/appkit/react";
-import { ChainNamespace } from "@reown/appkit-common";
+import { useDAppConnector } from "@/components/client-providers";
 import { HederaProvider, transactionToBase64String } from "@hashgraph/hedera-wallet-connect";
 
 export default function Home() {
@@ -16,33 +15,17 @@ export default function Home() {
     const [prompt, setPrompt] = useState("");
     const { mutateAsync, isPending } = useHandleChat();
 
-    const { activeChain } = useAppKitState()
-    const { walletProvider } = useAppKitProvider('hedera' as ChainNamespace);
+    const dAppConnector = useDAppConnector();
 
-    console.log('activeChain:', activeChain);
-    console.log('walletProvider:', walletProvider);
-
-    const getWalletProvider = () => {
-        if (!walletProvider) throw Error('user is disconnected')
-        return walletProvider as HederaProvider;
-    }
+    useEffect(() => {
+        if (dAppConnector) {
+            console.log('dAppConnector:', dAppConnector);
+        }
+    }, [dAppConnector]);
 
     async function signExampleTransaction() {
-        const wallet = getWalletProvider();
-        const transactionBytesBase64 = "CiIaACIeIgIIeDIAwgEVCgxNVEsgTXkgVG9rZW4yBQiAztoD";
-
-        const txBytes = Buffer.from(
-            transactionBytesBase64.replace(/`/g, '').trim(),
-            'base64'
-        );
-
-        const transaction = Transaction.fromBytes(txBytes);
-        const signTransactionResponse = await wallet.hedera_signAndExecuteTransaction({
-            signerAccountId: 'hedera:testnet:' + "0.0.4515756",
-            transactionList: transactionToBase64String(transaction),
-        })
-
-        console.log({ signTransactionResponse })
+        if (!dAppConnector) throw Error('Wallet not connected');
+        console.log('signExampleTransaction with dAppConnector:', dAppConnector);
     }
 
     async function handleUserMessage() {
@@ -64,9 +47,11 @@ export default function Home() {
         }])
 
         if (agentResponse.transactionBytes) {
-            const txBytes = Buffer.from(agentResponse.transactionBytes, 'base64');
-            const transaction = Transaction.fromBytes(txBytes);
-            console.log({ transaction })
+            const result = await dAppConnector?.signAndExecuteTransaction({
+                signerAccountId: dAppConnector.signers[0].getAccountId().toString(),
+                transactionList: agentResponse.transactionBytes,
+            });
+            console.log('result:', result);
         }
 
         console.log(prompt)

@@ -18,6 +18,7 @@ export async function initializeAgent() {
         userAccountId: userAccountId,
         verbose: false,
         openAIApiKey: openaiApiKey,
+        scheduleUserTransactionsInBytesMode: false,
     });
     await conversationalAgent.initialize();
     return conversationalAgent;
