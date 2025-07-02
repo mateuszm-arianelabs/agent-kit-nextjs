@@ -1,40 +1,56 @@
 "use client";
 
 import {ReactNode} from "react";
-import {WagmiAdapter} from "@reown/appkit-adapter-wagmi";
-import {WagmiProvider} from "wagmi";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {hederaTestnet} from "@reown/appkit/networks";
 import {createAppKit} from "@reown/appkit/react";
+import {
+    HederaAdapter, HederaChainDefinition, hederaNamespace, HederaProvider,
+} from "@hashgraph/hedera-wallet-connect";
+import type UniversalProvider from '@walletconnect/universal-provider'
 
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_ID ?? "";
 
-console.log(projectId)
-
-const metadata = {
-    name: 'AgentKit Next.js Demo',
-    description: 'AgentKit Next.js Demo',
-    url: 'https://example.com',
-    icons: ['https://avatars.githubusercontent.com/u/179229932']
-}
-
-const networks = [hederaTestnet];
-
-const wagmiAdapter = new WagmiAdapter({
-    networks,
-    projectId,
-    ssr: true,
-})
-
 const queryClient = new QueryClient()
 
-createAppKit({
-    adapters: [wagmiAdapter],
-    networks: [hederaTestnet],
-    projectId,
-    metadata,
-    defaultNetwork: hederaTestnet
-})
+if(typeof window !== "undefined") {
+    const metadata = {
+        name: 'AgentKit Next.js Demo',
+        description: 'AgentKit Next.js Demo',
+        url: 'https://example.com',
+        icons: ['https://avatars.githubusercontent.com/u/179229932']
+    }
+
+    const hederaEVMAdapter = new HederaAdapter({
+        projectId,
+        networks: [
+            HederaChainDefinition.EVM.Mainnet,
+            HederaChainDefinition.EVM.Testnet,
+        ],
+        namespace: 'eip155',
+    })
+
+    const hederaNativeAdapter = new HederaAdapter({
+        projectId,
+        networks: [HederaChainDefinition.Native.Mainnet, HederaChainDefinition.Native.Testnet],
+        namespace: hederaNamespace, // 'hedera'
+    })
+
+    const universalProvider = (await HederaProvider.init({
+        projectId,
+        metadata,
+    })) as unknown as UniversalProvider // avoid type mismatch error due to missing of private properties in HederaProvider
+
+    createAppKit({
+        adapters: [hederaEVMAdapter, hederaNativeAdapter],
+        //@ts-expect-error expected type error
+        universalProvider,
+        networks: [hederaTestnet],
+        projectId,
+        metadata,
+        defaultNetwork: hederaTestnet
+    })
+}
 
 type ClientProvidersProps = {
     children: ReactNode
@@ -42,10 +58,8 @@ type ClientProvidersProps = {
 
 export function ClientProviders({children}: ClientProvidersProps) {
     return (
-        <WagmiProvider config={wagmiAdapter.wagmiConfig}>
             <QueryClientProvider client={queryClient}>
                 {children}
             </QueryClientProvider>
-        </WagmiProvider>
     )
 }

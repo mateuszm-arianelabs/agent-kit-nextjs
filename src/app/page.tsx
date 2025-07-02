@@ -1,34 +1,45 @@
 "use client"
 
 import {ChatMessage} from "@/shared/types";
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import {useHandleChat} from "@/api/handle-chat";
-import {useSignMessage} from "wagmi";
 import { Transaction } from '@hashgraph/sdk';
 import {ChatInput} from "@/components/chat-input";
 import {EmptyChat} from "@/components/empty-chat";
 import {Header} from "@/components/header";
-import { useAppKitProvider } from "@reown/appkit/react";
-import type { Provider } from "@reown/appkit/react";
+import {useAppKitProvider, useAppKitState} from "@reown/appkit/react";
+import {ChainNamespace} from "@reown/appkit-common";
+import {HederaProvider, transactionToBase64String} from "@hashgraph/hedera-wallet-connect";
 
 export default function Home() {
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
     const [prompt, setPrompt] = useState("");
     const {mutateAsync, isPending} = useHandleChat();
-    const { signMessageAsync } = useSignMessage()
 
-    const { walletProvider } = useAppKitProvider<Provider>("eip155");
+    const { activeChain } = useAppKitState()
+    const { walletProvider } = useAppKitProvider(activeChain ?? ('hedera' as ChainNamespace))
 
-    async function test() {
-        console.log(walletProvider)
-        const result = await walletProvider.request({
-            method: "hedera_signAndExecuteTransaction",
-            params: {
-                signerAccountId: "hedera:testnet:0.0.4515756",
-                transactionList: "ChsaACIXIgIIeDIAwgEOCgVzaWVtYTIFCIDO2gM="
-            }
-        });
-        console.log(result);
+    const getWalletProvider = () => {
+        if (!walletProvider) throw Error('user is disconnected')
+        return walletProvider as HederaProvider;
+    }
+
+    async function signExampleTransaction() {
+        const wallet = getWalletProvider();
+        const transactionBytesBase64 = "CiIaACIeIgIIeDIAwgEVCgxNVEsgTXkgVG9rZW4yBQiAztoD";
+
+        const txBytes = Buffer.from(
+            transactionBytesBase64.replace(/`/g, '').trim(),
+            'base64'
+        );
+
+        const transaction = Transaction.fromBytes(txBytes);
+        const signTransactionResponse = await wallet.hedera_signAndExecuteTransaction({
+            signerAccountId: 'hedera:testnet:' + "0.0.4515756",
+            transactionList: transactionToBase64String(transaction),
+        })
+
+        console.log({signTransactionResponse})
     }
 
     async function handleUserMessage() {
@@ -52,13 +63,7 @@ export default function Home() {
         if(agentResponse.transactionBytes) {
             const txBytes = Buffer.from(agentResponse.transactionBytes, 'base64');
             const transaction = Transaction.fromBytes(txBytes);
-            const sign = await signMessageAsync({
-                message: transaction.toBytes().toString()
-            });
-            setChatHistory(v => [...v, {
-                type: "ai",
-                content: sign
-            }])
+            console.log({transaction})
         }
 
         console.log(prompt)
@@ -68,7 +73,8 @@ export default function Home() {
     <div className="h-screen w-full bg-zinc-900 flex items-center justify-center flex-col">
         <main className="w-4xl h-full flex flex-col">
             <Header />
-            <button onClick={test}>
+            <button onClick={signExampleTransaction}>
+                essen
             </button>
             <div className="bg-zinc-800 grow rounded-lg flex flex-col gap-2 p-4">
                 {

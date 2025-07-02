@@ -9,10 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hashgraph/hedera-wallet-connect": "2.0.0-canary.811af2f.0",
     "@hashgraph/sdk": "^2.67.0",
     "@reown/appkit": "^1.7.11",
     "@reown/appkit-adapter-wagmi": "^1.7.11",
     "@tanstack/react-query": "^5.81.5",
+    "@walletconnect/modal": "^2.7.0",
+    "@walletconnect/universal-provider": "^2.21.4",
     "hedera-agent-kit": "^2.0.0",
     "next": "15.3.4",
     "react": "^19.0.0",
