@@ -2,7 +2,7 @@
 
 import { ChatMessage } from '@/shared/types';
 import { useState, useEffect } from 'react';
-import { useHandleChat } from '@/api/handle-chat';
+import { useHandleChat } from '@/lib/handle-chat';
 import { ChatInput } from '@/components/chat-input';
 import { Header } from '@/components/header';
 import { useDAppConnector } from '@/components/client-providers';
